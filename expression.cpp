@@ -81,7 +81,7 @@ int ScanLexemes(Lexeme* lexemes) {
 
       /* Перескакиваем через считанное число. */
       ptr = endPtr;
-    } else if (*ptr == '+' || *ptr == '-' || *ptr == '*' || *ptr == '/' ||
+    } else if (*ptr == '+' ||  *ptr == '-' || *ptr == '?' || *ptr == ':' || *ptr == '*' || *ptr == '/' ||
         *ptr == '(' || *ptr == ')') {
       /* Обрабатываем операцию. */
       if (numLexemes >= MAX_LEXEMES) {
@@ -110,7 +110,13 @@ int ScanLexemes(Lexeme* lexemes) {
          * в скобках. */
         lexemes[numLexemes].op = *ptr;
         lexemes[numLexemes].priority = 4;
-      } else if (*ptr == ')') {
+      } else if (*ptr == '?' || *ptr == ':') {
+        
+        lexemes[numLexemes].op = *ptr;
+        lexemes[numLexemes].priority = 0;
+
+        
+      }else if (*ptr == ')') {
         /* У закрывающейся скобки самый низкий приоритет. Скобки схлопываются
          * только после того как выполнятся все операции внутри них. */
         lexemes[numLexemes].op = *ptr;
@@ -152,6 +158,21 @@ int ToPolandForm(Lexeme* lexemes, int numLexemes, Lexeme* polandLexemes) {
     /* Число добавляем сразу в польскую запись, а операцию кладём в стек. */
     if (lexemes[k].op == 0)
       polandLexemes[numPolandLexemes++] = lexemes[k];
+    else if (lexemes[k].op == '?') {
+    // Кладем '?' в стек — он будет ждать своего ':'
+    stack[stackSize++] = lexemes[k];
+  } else if (lexemes[k].op == ':') {
+    while (stackSize > 0 && stack[stackSize - 1].op != '?') {
+      polandLexemes[numPolandLexemes++] = stack[--stackSize];
+    }
+    if (stackSize > 0) {
+      stackSize--;
+      Lexeme ternaryOp;
+      ternaryOp.op = '?';
+      ternaryOp.value = 0;
+      ternaryOp.priority = 0;
+      polandLexemes[numPolandLexemes++] = ternaryOp;
+    }
     else {
       stack[stackSize++] = lexemes[k];
     }
@@ -239,7 +260,19 @@ double ComputePolandExpression(Lexeme* expression, int N) {
       /* Деление. */
       stack[stackSize - 2] = stack[stackSize - 2] / stack[stackSize - 1];
       stackSize--;
-    } else if (expression[k].op == 'u' && stackSize >= 1) {
+    }else if (expression[k].op == '?' && stackSize >= 3) {
+  // Обработка тернарной операции: условие, значение_если_истина, значение_иначе
+    double condition = stack[stackSize - 3];
+    if (stack[stackSize - 3]==0)
+    {
+      stack[stackSize - 3] = stack[stackSize - 1];
+    }
+    else
+    {
+      stack[stackSize - 3] = stack[stackSize - 2];
+    }
+    stackSize -= 2; 
+  }else if (expression[k].op == 'u' && stackSize >= 1) {
       /* Это операция унарный минус. Она принимает один аргумент. */
       stack[stackSize - 1] = -stack[stackSize - 1];
     } else {
