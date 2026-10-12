@@ -20,307 +20,331 @@
 
 #define MAX_LEXEMES 100
 
-/* Лексема является операцией, если поле op равно '+', '-', '*' или '/',
- * 'u' (унарный минус), '(' или ')'. Лексема является числом, которое будет
- * храниться в поле value, если поле op равно 0. Операциям назначены целочисленные
- * приоритеты. Операция с высоким приоритетом должна выполняться раньше операции
- * с низким приоритетом. */
+ /* Лексема является операцией, если поле op равно '+', '-', '*' или '/',
+  * 'u' (унарный минус), '(' или ')'. Лексема является числом, которое будет
+  * храниться в поле value, если поле op равно 0. Операциям назначены целочисленные
+  * приоритеты. Операция с высоким приоритетом должна выполняться раньше операции
+  * с низким приоритетом. */
 struct Lexeme {
-  char op;
-  double value;
-  int priority;
+    char op;
+    double value;
+    int priority;
 };
 
 /* Функция предназначена для вывода массива лексем на экран. */
 void PrintLexemes(Lexeme* lexemes, int numLexemes) {
-  for (int k = 0; k < numLexemes; k++) {
-    if (lexemes[k].op != 0) {
-      std::cout << "Lexeme ('" << lexemes[k].op << "', "
-          << lexemes[k].value << ", " << lexemes[k].priority << ")" << std::endl;
-    } else {
-      std::cout << "Lexeme ('value', "
-          << lexemes[k].value << ", " << lexemes[k].priority << ")" << std::endl;
+    for (int k = 0; k < numLexemes; k++) {
+        if (lexemes[k].op != 0) {
+            std::cout << "Lexeme ('" << lexemes[k].op << "', "
+                << lexemes[k].value << ", " << lexemes[k].priority << ")" << std::endl;
+        }
+        else {
+            std::cout << "Lexeme ('value', "
+                << lexemes[k].value << ", " << lexemes[k].priority << ")" << std::endl;
+        }
     }
-  }
 }
 
 int ScanLexemes(Lexeme* lexemes) {
-  char str[1024];
-  char* ptr;
-  int numLexemes = 0;
+    char str[1024];
+    char* ptr;
+    int numLexemes = 0;
 
-  /* Считываем выражение. */
-  if (!std::cin.getline(str, 1024)) {
-    std::cerr << "Can't read expression!" << std::endl;
-    return -1;
-  }
-
-  /* Разбираем выражение посимвольно. Создаём массив лексем. */
-  for (ptr = str; *ptr != 0; ) {
-    /* Если текущий символ --- цифра или точка, запускаем процедуру чтения числа. */
-    if (isdigit(*ptr) || *ptr == '.') {
-      char* endPtr;
-
-      if (numLexemes >= MAX_LEXEMES) {
-        std::cerr << "Can't read new lexeme. Not enough space!" << std::endl;
+    /* Считываем выражение. */
+    if (!std::cin.getline(str, 1024)) {
+        std::cerr << "Can't read expression!" << std::endl;
         return -1;
-      }
-
-      lexemes[numLexemes].value = strtod(ptr, &endPtr);
-      lexemes[numLexemes].op = 0;
-      lexemes[numLexemes].priority = 0;
-
-      /* endPtr --- позиция, на которой считывание числа завершилось. */
-      if (endPtr == ptr) {
-        /* Не считали ни одного символа. */
-        std::cerr << "Can't read value from '" << ptr << "'!" << std::endl;
-        return -1;
-      }
-
-      numLexemes++;
-
-      /* Перескакиваем через считанное число. */
-      ptr = endPtr;
-    } else if (*ptr == '+' ||  *ptr == '-' || *ptr == '?' || *ptr == ':' || *ptr == '*' || *ptr == '/' ||
-        *ptr == '(' || *ptr == ')') {
-      /* Обрабатываем операцию. */
-      if (numLexemes >= MAX_LEXEMES) {
-        std::cerr << "Can't read new lexeme. Not enough space!" << std::endl;
-        return -1;
-      }
-
-      lexemes[numLexemes].value = 0;
-
-      if (*ptr == '-' && (numLexemes == 0 ||
-          (numLexemes > 0 && lexemes[numLexemes - 1].op != 0))) {
-        /* Это унарный минус. Он может стоять либо в начале выражения,
-         * либо после открывающейся скобки. Приоритет унарного минуса
-         * выше приоритета умножения или деления. */
-        lexemes[numLexemes].op = 'u';
-        lexemes[numLexemes].priority = 3;
-      } else if (*ptr == '*' || *ptr == '/') {
-        lexemes[numLexemes].op = *ptr;
-        lexemes[numLexemes].priority = 2;
-      } else if (*ptr == '+' || *ptr == '-') {
-        lexemes[numLexemes].op = *ptr;
-        lexemes[numLexemes].priority = 1;
-      } else if (*ptr == '(') {
-        /* У открывающейся скобки самый высокий приоритет. Любая операция,
-         * расположенная перед ней, должна дождаться выполнения операций
-         * в скобках. */
-        lexemes[numLexemes].op = *ptr;
-        lexemes[numLexemes].priority = 4;
-      } else if (*ptr == '?' || *ptr == ':') {
-        
-        lexemes[numLexemes].op = *ptr;
-        lexemes[numLexemes].priority = 0;
-
-        
-      }else if (*ptr == ')') {
-        /* У закрывающейся скобки самый низкий приоритет. Скобки схлопываются
-         * только после того как выполнятся все операции внутри них. */
-        lexemes[numLexemes].op = *ptr;
-        lexemes[numLexemes].priority = 0;
-      } else {
-        std::cerr << "Something wrong has happened!" << std::endl;
-        return -1;
-      }
-
-      numLexemes++;
-
-      ptr++;
-    } else if (std::isspace(*ptr)) {
-      /* Пропускаем пробельный символ. */
-      ptr++;
     }
-  }
 
-  /* Добавим фиктивную операцию '=' с самым низким приоритетом, чтобы
-   * перед ней схлопывался стек операций. */
-  lexemes[numLexemes].op = '=';
-  lexemes[numLexemes].value = 0;
-  lexemes[numLexemes].priority = 0;
+    /* Разбираем выражение посимвольно. Создаём массив лексем. */
+    for (ptr = str; *ptr != 0; ) {
+        /* Если текущий символ --- цифра или точка, запускаем процедуру чтения числа. */
+        if (isdigit(*ptr) || *ptr == '.') {
+            char* endPtr;
 
-  numLexemes++;
+            if (numLexemes >= MAX_LEXEMES) {
+                std::cerr << "Can't read new lexeme. Not enough space!" << std::endl;
+                return -1;
+            }
 
-  return numLexemes;
+            lexemes[numLexemes].value = strtod(ptr, &endPtr);
+            lexemes[numLexemes].op = 0;
+            lexemes[numLexemes].priority = 0;
+
+            /* endPtr --- позиция, на которой считывание числа завершилось. */
+            if (endPtr == ptr) {
+                /* Не считали ни одного символа. */
+                std::cerr << "Can't read value from '" << ptr << "'!" << std::endl;
+                return -1;
+            }
+
+            numLexemes++;
+
+            /* Перескакиваем через считанное число. */
+            ptr = endPtr;
+        }
+        else if (*ptr == '+' || *ptr == '-' || *ptr == '*' || *ptr == '/' ||
+            *ptr == '(' || *ptr == ')' || *ptr == '?' || *ptr == ':') {
+            /* Обрабатываем операцию. */
+            if (numLexemes >= MAX_LEXEMES) {
+                std::cerr << "Can't read new lexeme. Not enough space!" << std::endl;
+                return -1;
+            }
+
+            lexemes[numLexemes].value = 0;
+
+            if (*ptr == '-' && (numLexemes == 0 ||
+                (numLexemes > 0 && lexemes[numLexemes - 1].op != 0))) {
+                /* Это унарный минус. Он может стоять либо в начале выражения,
+                 * либо после открывающейся скобки. Приоритет унарного минуса
+                 * выше приоритета умножения или деления. */
+                lexemes[numLexemes].op = 'u';
+                lexemes[numLexemes].priority = 3;
+            }
+            else if (*ptr == '*' || *ptr == '/') {
+                lexemes[numLexemes].op = *ptr;
+                lexemes[numLexemes].priority = 2;
+            }
+            else if (*ptr == '+' || *ptr == '-') {
+                lexemes[numLexemes].op = *ptr;
+                lexemes[numLexemes].priority = 1;
+            }
+            else if (*ptr == '(') {
+                /* У открывающейся скобки самый высокий приоритет. Любая операция,
+                 * расположенная перед ней, должна дождаться выполнения операций
+                 * в скобках. */
+                lexemes[numLexemes].op = *ptr;
+                lexemes[numLexemes].priority = 4;
+            }
+            else if (*ptr == '?' || *ptr == ':') {
+                /* У тернарного оператора самый низкий приоритет. */
+                lexemes[numLexemes].op = *ptr;
+                lexemes[numLexemes].priority = 0;
+            }
+            else if (*ptr == ')') {
+                /* У закрывающейся скобки самый низкий приоритет. Скобки схлопываются
+                 * только после того как выполнятся все операции внутри них. */
+                lexemes[numLexemes].op = *ptr;
+                lexemes[numLexemes].priority = 0;
+            }
+            else {
+                std::cerr << "Something wrong has happened!" << std::endl;
+                return -1;
+            }
+
+            numLexemes++;
+
+            ptr++;
+        }
+        else if (std::isspace(*ptr)) {
+            /* Пропускаем пробельный символ. */
+            ptr++;
+        }
+    }
+
+    /* Добавим фиктивную операцию '=' с самым низким приоритетом, чтобы
+     * перед ней схлопывался стек операций. */
+    lexemes[numLexemes].op = '=';
+    lexemes[numLexemes].value = 0;
+    lexemes[numLexemes].priority = 0;
+
+    numLexemes++;
+
+    return numLexemes;
 }
 
 /* Функция принимает выражение, разбитое на лексемы и записывает это выражение
  * в польской форме записи. Функция возвращает количество лексем в польской форме. */
 int ToPolandForm(Lexeme* lexemes, int numLexemes, Lexeme* polandLexemes) {
-  /* В этот стек будем складывать операции. */
-  Lexeme stack[MAX_LEXEMES];
-  int stackSize = 0;
-  int numPolandLexemes = 0;
+    /* В этот стек будем складывать операции. */
+    Lexeme stack[MAX_LEXEMES];
+    int stackSize = 0;
+    int numPolandLexemes = 0;
 
-  for (int k = 0; k < numLexemes; k++) {
-    /* Число добавляем сразу в польскую запись, а операцию кладём в стек. */
-    if (lexemes[k].op == 0)
-      polandLexemes[numPolandLexemes++] = lexemes[k];
-    else if (lexemes[k].op == '?') {
-    // Кладем '?' в стек — он будет ждать своего ':'
-    stack[stackSize++] = lexemes[k];
-  } else if (lexemes[k].op == ':') {
-    while (stackSize > 0 && stack[stackSize - 1].op != '?') {
-      polandLexemes[numPolandLexemes++] = stack[--stackSize];
+    for (int k = 0; k < numLexemes; k++) {
+        /* Число добавляем сразу в польскую запись. */
+        if (lexemes[k].op == 0) {
+            polandLexemes[numPolandLexemes++] = lexemes[k];
+        }
+
+        /* Обрабатываем тернарный оператор отдельно. */
+        if (lexemes[k].op == '?') {
+            /* Кладём '?' в стек — он будет ждать своего ':' */
+            stack[stackSize++] = lexemes[k];
+        }
+
+        if (lexemes[k].op == ':') {
+            /* Перемещаем операции из стека в выход до тех пор, пока не встретим '?'. */
+            while (stackSize > 0 && stack[stackSize - 1].op != '?') {
+                polandLexemes[numPolandLexemes++] = stack[--stackSize];
+            }
+            if (stackSize > 0 && stack[stackSize - 1].op == '?') {
+                /* Убираем маркер '?' и на его место кладём специальную операцию-тернарник,
+                 * которая будет ожидать до обработки правой ветки. */
+                stackSize--;
+                Lexeme ternaryOp;
+                ternaryOp.op = '?';
+                ternaryOp.value = 0;
+                ternaryOp.priority = 0;
+                stack[stackSize++] = ternaryOp;
+            }
+            else {
+                /* Несбалансированный ':' */
+                std::cerr << "Incorrect expression: ':' without matching '?'" << std::endl;
+                return -1;
+            }
+
+            /* После дополнительных действий продолжаем обработку следующей лексемы. */
+        }
+
+        /* Обычные операторы и скобки — кладём в стек и сворачиваем по приоритету. */
+        stack[stackSize++] = lexemes[k];
+
+        bool working = true;
+        while (stackSize >= 2 && working) {
+            working = false;
+
+            /* Скобки обрабатываем отдельно. Если открывающаяся и закрывающаяся скобки
+             * идут подряд, то просто убираем их из стека. */
+            if (stack[stackSize - 2].op == '(' && stack[stackSize - 1].op == ')') {
+                stackSize -= 2;
+                working = true;
+            }
+            else if (stack[stackSize - 2].op != '(' &&
+                stack[stackSize - 2].priority >= stack[stackSize - 1].priority) {
+                /* Если за операцией с высоким приоритетом следует операция
+                 * с меньшим или таким же приоритетом, то следует выполнить первую из них.
+                 * Перемещаем её из стека в польскую запись. */
+                polandLexemes[numPolandLexemes++] = stack[stackSize - 2];
+                stack[stackSize - 2] = stack[stackSize - 1];
+                stackSize--;
+                working = true;
+            }
+        }
     }
-    if (stackSize > 0) {
-      stackSize--;
-      Lexeme ternaryOp;
-      ternaryOp.op = '?';
-      ternaryOp.value = 0;
-      ternaryOp.priority = 0;
-      polandLexemes[numPolandLexemes++] = ternaryOp;
-    }
-    else {
-      stack[stackSize++] = lexemes[k];
-    }
 
-    /* В цикле перемещаем операции из стека в польскую запись в соответствии
-     * с приоритетом операций. */
-    bool working = true;
+    //  std::cout << "Stack:" << std::endl;
+    //  PrintLexemes(stack, stackSize);
 
-    while (stackSize >= 2 && working) {
-      working = false;
-
-      /* Скобки обрабатываем отдельно. Если открывающаяся и закрывающаяся скобки
-       * идут подряд, то просто убираем их из стека. */
-      if (stack[stackSize - 2].op == '(' && stack[stackSize - 1].op == ')') {
-        stackSize -= 2;
-        working = true;
-      } else if (stack[stackSize - 2].op != '(' &&
-          stack[stackSize - 2].priority >= stack[stackSize - 1].priority) {
-        /* Если за операцией с высоким приоритетом следует операция
-         * с меньшим или таким же приоритетом, то следует выполнить первую из них.
-         * Перемещаем её из стека в польскую запись. */
-        polandLexemes[numPolandLexemes++] = stack[stackSize - 2];
-        stack[stackSize - 2] = stack[stackSize - 1];
-        stackSize--;
-        working = true;
-      }
+      /* В стеке должна остаться только одна операция '='. */
+    /* После обработки всех лексем в стеке должна остаться только фиктивная операция '='. */
+    if (stackSize != 1) {
+        std::cerr << "Incorrect expression!" << std::endl;
+        return -1;
     }
 
-  }
+    if (stack[stackSize - 1].op != '=') {
+        std::cerr << "Incorrect expression!" << std::endl;
+        return -1;
+    }
 
-//  std::cout << "Stack:" << std::endl;
-//  PrintLexemes(stack, stackSize);
+    /* На самом деле, функция не проверяет все возможные ошибки. Например,
+     * нет проверки того, что у бинарных операторов есть два аргумента,
+     * а у унарного оператора ровно один аргумент.
+     *
+     * Таким образом, некоторые некорректные выражения будут преобразовываться в
+     * польскую форму, например, выражение 1*2-, однако в этих случаях
+     * будет выдаваться ошибка на этапе вычисления значения выражения в польской
+     * форме. */
 
-  /* В стеке должна остаться только одна операция '='. */
-  if (stackSize != 1) {
-    std::cerr << "Incorrect expression!" << std::endl;
-    return -1;
-  }
-
-  if (stack[stackSize - 1].op != '=') {
-    std::cerr << "Incorrect expression!" << std::endl;
-    return -1;
-  }
-
-  /* На самом деле, функция не проверяет все возможные ошибки. Например,
-   * нет проверки того, что у бинарных операторов есть два аргумента,
-   * а у унарного оператора ровно один аргумент.
-   *
-   * Таким образом, некоторые некорректные выражения будут преобразовываться в
-   * польскую форму, например, выражение 1*2-, однако в этих случаях
-   * будет выдаваться ошибка на этапе вычисления значения выражения в польской
-   * форме. */
-
-  return numPolandLexemes;
+    return numPolandLexemes;
 }
 
 /* Функция вычисляет выражение, записанное в польской форме записи. */
 double ComputePolandExpression(Lexeme* expression, int N) {
-  double stack[MAX_LEXEMES];
-  int stackSize = 0;
+    double stack[MAX_LEXEMES];
+    int stackSize = 0;
 
-  if (N <= 0)
-    return 0;
+    if (N <= 0)
+        return 0;
 
-  for (int k = 0; k < N; k++) {
+    for (int k = 0; k < N; k++) {
 
-    if (expression[k].op == 0) {
-      /* Кладём новую лексему в стек. */
+        if (expression[k].op == 0) {
+            /* Кладём новую лексему в стек. */
 
-      stack[stackSize++] = expression[k].value;
-    } else if (expression[k].op == '+' && stackSize >= 2) {
-      /* Операция сложения. Вытаскиваем два элемента из стека,
-       * складываем их и результат кладём обратно в стек. */
-      stack[stackSize - 2] = stack[stackSize - 2] + stack[stackSize - 1];
-      stackSize--;
-    } else if (expression[k].op == '-' && stackSize >= 2) {
-      /* Вычитание. */
-      stack[stackSize - 2] = stack[stackSize - 2] - stack[stackSize - 1];
-      stackSize--;
-    } else if (expression[k].op == '*' && stackSize >= 2) {
-      /* Умножение. */
-      stack[stackSize - 2] = stack[stackSize - 2] * stack[stackSize - 1];
-      stackSize--;
-    } else if (expression[k].op == '/' && stackSize >= 2) {
-      /* Деление. */
-      stack[stackSize - 2] = stack[stackSize - 2] / stack[stackSize - 1];
-      stackSize--;
-    }else if (expression[k].op == '?' && stackSize >= 3) {
-  // Обработка тернарной операции: условие, значение_если_истина, значение_иначе
-    double condition = stack[stackSize - 3];
-    if (stack[stackSize - 3]==0)
-    {
-      stack[stackSize - 3] = stack[stackSize - 1];
+            stack[stackSize++] = expression[k].value;
+        }
+        else if (expression[k].op == '+' && stackSize >= 2) {
+            /* Операция сложения. Вытаскиваем два элемента из стека,
+             * складываем их и результат кладём обратно в стек. */
+            stack[stackSize - 2] = stack[stackSize - 2] + stack[stackSize - 1];
+            stackSize--;
+        }
+        else if (expression[k].op == '-' && stackSize >= 2) {
+            /* Вычитание. */
+            stack[stackSize - 2] = stack[stackSize - 2] - stack[stackSize - 1];
+            stackSize--;
+        }
+        else if (expression[k].op == '*' && stackSize >= 2) {
+            /* Умножение. */
+            stack[stackSize - 2] = stack[stackSize - 2] * stack[stackSize - 1];
+            stackSize--;
+        }
+        else if (expression[k].op == '/' && stackSize >= 2) {
+            /* Деление. */
+            stack[stackSize - 2] = stack[stackSize - 2] / stack[stackSize - 1];
+            stackSize--;
+        }
+        else if (expression[k].op == 'u' && stackSize >= 1) {
+            /* Это операция унарный минус. Она принимает один аргумент. */
+            stack[stackSize - 1] = -stack[stackSize - 1];
+        }
+        else if (expression[k].op == '?' && stackSize >= 3) {
+            double con = stack[stackSize - 3];
+            double trueV = stack[stackSize - 2];
+            double falseV = stack[stackSize - 1];
+            if (con == 0) {
+                stack[stackSize - 3] = falseV;
+            }
+            else {
+                stack[stackSize - 3] = trueV;
+            }
+            stackSize -= 2;
+        }
+        else {
+            /* NAN это Not a Number. Специальное значение, которое можно использовать
+             * для того, чтобы вернуть ошибку. */
+            return NAN;
+        }
     }
-    else
-    {
-      stack[stackSize - 3] = stack[stackSize - 2];
-    }
-    stackSize -= 2; 
-  }else if (expression[k].op == 'u' && stackSize >= 1) {
-      /* Это операция унарный минус. Она принимает один аргумент. */
-      stack[stackSize - 1] = -stack[stackSize - 1];
-    } else {
-      /* NAN это Not a Number. Специальное значение, которое можно использовать
-       * для того, чтобы вернуть ошибку. */
-      return NAN;
-    }
-  }
 
-  /* После вычисления операций в стеке должно остаться ровно одно число ---
-   * результат выражения. В противном случае выражение некорректно. */
-  if (stackSize == 1)
-    return stack[0];
+    /* После вычисления операций в стеке должно остаться ровно одно число ---
+     * результат выражения. В противном случае выражение некорректно. */
+    if (stackSize == 1)
+        return stack[0];
 
-  return NAN;
+    return NAN;
 }
 
 int main() {
-  Lexeme lexemes[MAX_LEXEMES] = { 0 };
-  int numLexemes = 0;
-  Lexeme polandLexemes[MAX_LEXEMES] = { 0 };
-  int numPolandLexemes = 0;
+    Lexeme lexemes[MAX_LEXEMES] = { 0 };
+    int numLexemes = 0;
+    Lexeme polandLexemes[MAX_LEXEMES] = { 0 };
+    int numPolandLexemes = 0;
 
-  numLexemes = ScanLexemes(lexemes);
+    numLexemes = ScanLexemes(lexemes);
 
-  if (numLexemes <= 0) {
-    std::cerr << "Read " << numLexemes << " lexemes!" << std::endl;
-    return 1;
-  }
+    if (numLexemes <= 0) {
+        std::cerr << "Read " << numLexemes << " lexemes!" << std::endl;
+        return 1;
+    }
 
-  std::cout << "Lexemes:" << std::endl;
-  PrintLexemes(lexemes, numLexemes);
+    std::cout << "Lexemes:" << std::endl;
+    PrintLexemes(lexemes, numLexemes);
 
-  numPolandLexemes = ToPolandForm(lexemes, numLexemes, polandLexemes);
+    numPolandLexemes = ToPolandForm(lexemes, numLexemes, polandLexemes);
 
-  if (numPolandLexemes <= 0) {
-    std::cerr << "Read " << numPolandLexemes << " poland lexemes!" << std::endl;
-    return 1;
-  }
+    if (numPolandLexemes <= 0) {
+        std::cerr << "Read " << numPolandLexemes << " poland lexemes!" << std::endl;
+        return 1;
+    }
 
-  std::cout << "Poland form:" << std::endl;
-  PrintLexemes(polandLexemes, numPolandLexemes);
+    std::cout << "Poland form:" << std::endl;
+    PrintLexemes(polandLexemes, numPolandLexemes);
 
-  double result = ComputePolandExpression(polandLexemes, numPolandLexemes);
+    double result = ComputePolandExpression(polandLexemes, numPolandLexemes);
 
-  std::cout << "Result: " << result << std::endl;
+    std::cout << "Result: " << result << std::endl;
 
 }
-
-
-
